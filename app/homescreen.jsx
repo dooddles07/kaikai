@@ -8,6 +8,7 @@ import {
   FlatList,
   Animated,
   Alert,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +18,8 @@ import { BlurView } from "expo-blur";
 export default function Index() {
   const [todos, setTodos] = useState([]);
   const [text, setText] = useState("");
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editTodo, setEditTodo] = useState(null);
   const [buttonScale] = useState(new Animated.Value(1)); // Scale animation for the "Add" button
 
   const addTodo = useCallback(() => {
@@ -98,6 +101,26 @@ export default function Index() {
     setTodos(updatedTodos);
   }, [todos]);
 
+  const openEditModal = (todo) => {
+    setEditTodo(todo);
+    setEditModalVisible(true);
+  };
+
+  const saveEditTodo = () => {
+    if (!editTodo.title.trim()) {
+      Alert.alert("Error", "Task cannot be empty!");
+      return;
+    }
+
+    setTodos((prevTodos) =>
+      prevTodos.map((todo) =>
+        todo.id === editTodo.id ? { ...todo, title: editTodo.title } : todo
+      )
+    );
+    setEditModalVisible(false);
+    setEditTodo(null);
+  };
+
   const handleButtonPressIn = () => {
     Animated.timing(buttonScale, {
       toValue: 0.95,
@@ -120,9 +143,10 @@ export default function Index() {
         item={item}
         toggleTodo={toggleTodo}
         removeTodo={removeTodo}
+        openEditModal={openEditModal}
       />
     ),
-    [toggleTodo, removeTodo]
+    [toggleTodo, removeTodo, openEditModal]
   );
 
   const completedTodos = todos.filter((todo) => todo.completed);
@@ -187,12 +211,46 @@ export default function Index() {
             />
           </>
         )}
+
+        {/* Edit Modal */}
+        <Modal
+          visible={editModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setEditModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Edit Task</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Edit task title"
+                placeholderTextColor="#BBB"
+                value={editTodo?.title}
+                onChangeText={(text) =>
+                  setEditTodo((prev) => ({ ...prev, title: text }))
+                }
+              />
+              <View style={styles.modalActions}>
+                <Pressable
+                  style={styles.modalButton}
+                  onPress={() => setEditModalVisible(false)}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.modalButton} onPress={saveEditTodo}>
+                  <Text style={styles.modalButtonText}>Save</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
 }
 
-const TodoItem = ({ item, toggleTodo, removeTodo }) => {
+const TodoItem = ({ item, toggleTodo, removeTodo, openEditModal }) => {
   if (!item.fadeAnim) item.fadeAnim = new Animated.Value(1);
   if (!item.slideAnim) item.slideAnim = new Animated.Value(0);
   if (!item.bounceAnim) item.bounceAnim = new Animated.Value(1);
@@ -221,9 +279,12 @@ const TodoItem = ({ item, toggleTodo, removeTodo }) => {
         </Text>
       </Pressable>
       <View style={styles.todoActions}>
+        <Pressable onPress={() => openEditModal(item)} style={styles.editButton}>
+          <MaterialCommunityIcons name="pencil" size={24} color="#3B82F6" />
+        </Pressable>
         <Pressable onPress={() => toggleTodo(item.id)} style={styles.toggleButton}>
           <Text style={styles.toggleButtonText}>
-            {item.completed ? "Undo" : "Complete"}
+            {item.completed ? "Undo" : "✔"}
           </Text>
         </Pressable>
         <Pressable onPress={() => removeTodo(item.id)}>
@@ -344,13 +405,13 @@ const styles = StyleSheet.create({
   toggleButton: {
     backgroundColor: "#3B82F6",
     borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     marginRight: 8,
   },
   toggleButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "bold",
   },
   sectionHeader: {
@@ -371,5 +432,44 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
     marginTop: 10,
+  },
+  editButton: {
+    marginRight: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#1E293B",
+    borderRadius: 12,
+    padding: 20,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    backgroundColor: "#3B82F6",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 8,
+  },
+  modalButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
