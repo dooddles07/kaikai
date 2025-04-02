@@ -12,11 +12,12 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { data } from "@/data/todos";
+import { BlurView } from "expo-blur";
 
 export default function Index() {
-  const [todos, setTodos] = useState(data || []);
+  const [todos, setTodos] = useState([]);
   const [text, setText] = useState("");
+  const [buttonScale] = useState(new Animated.Value(1)); // Scale animation for the "Add" button
 
   const addTodo = useCallback(() => {
     if (!text.trim()) {
@@ -29,35 +30,66 @@ export default function Index() {
       title: text.trim(),
       completed: false,
       fadeAnim: new Animated.Value(0), // Start with opacity 0
+      slideAnim: new Animated.Value(300), // Start off-screen (right)
     };
 
     setTodos((prevTodos) => [newTodo, ...prevTodos]);
     setText("");
 
-    // Trigger animation to fade in the new task
-    Animated.timing(newTodo.fadeAnim, {
-      toValue: 1, // Fade to full opacity
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    // Trigger animation to fade in and slide in the new task
+    Animated.parallel([
+      Animated.timing(newTodo.fadeAnim, {
+        toValue: 1, // Fade to full opacity
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(newTodo.slideAnim, {
+        toValue: 0, // Slide to its position
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, [text]);
 
   const toggleTodo = useCallback((id) => {
     setTodos((prevTodos) =>
-      prevTodos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
+      prevTodos.map((todo) => {
+        if (todo.id === id) {
+          const bounceAnim = new Animated.Value(1);
+          Animated.sequence([
+            Animated.timing(bounceAnim, {
+              toValue: 1.2,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(bounceAnim, {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+          ]).start();
+          return { ...todo, completed: !todo.completed, bounceAnim };
+        }
+        return todo;
+      })
     );
   }, []);
 
   const removeTodo = useCallback((id) => {
     const updatedTodos = todos.map((todo) => {
       if (todo.id === id) {
-        Animated.timing(todo.fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
+        Animated.parallel([
+          Animated.timing(todo.fadeAnim, {
+            toValue: 0, // Fade out
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(todo.slideAnim, {
+            toValue: -300, // Slide off-screen (left)
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
           setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== id));
         });
       }
@@ -65,6 +97,22 @@ export default function Index() {
     });
     setTodos(updatedTodos);
   }, [todos]);
+
+  const handleButtonPressIn = () => {
+    Animated.timing(buttonScale, {
+      toValue: 0.95,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleButtonPressOut = () => {
+    Animated.timing(buttonScale, {
+      toValue: 1,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const renderItem = useCallback(
     ({ item }) => (
@@ -81,11 +129,11 @@ export default function Index() {
   const notCompletedTodos = todos.filter((todo) => !todo.completed);
 
   return (
-    <LinearGradient colors={["#1B1B2F", "#162447"]} style={styles.container}>
+    <LinearGradient colors={["#1E293B", "#0F172A"]} style={styles.container}>
       <SafeAreaView style={styles.safeContainer}>
-        <View style={styles.navbar}>
+        <BlurView intensity={50} tint="dark" style={styles.navbar}>
           <Text style={styles.navbarTitle}>TODO LIST</Text>
-        </View>
+        </BlurView>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -96,24 +144,49 @@ export default function Index() {
             returnKeyType="done"
             onSubmitEditing={addTodo}
           />
-          <Pressable onPress={addTodo} style={styles.addButton}>
-            <Text style={styles.addButtonText}>Add</Text>
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
+            <Pressable
+              onPressIn={handleButtonPressIn}
+              onPressOut={handleButtonPressOut}
+              onPress={addTodo}
+              style={styles.addButton}
+            >
+              <LinearGradient
+                colors={["#3B82F6", "#2563EB"]}
+                style={styles.addButtonGradient}
+              >
+                <Text style={styles.addButtonText}>Add</Text>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
         </View>
-        <Text style={styles.sectionHeader}>Not Completed</Text>
-        <FlatList
-          data={notCompletedTodos}
-          renderItem={renderItem}
-          keyExtractor={(todo) => todo.id.toString()}
-          contentContainerStyle={styles.listContainer}
-        />
-        <Text style={styles.sectionHeader}>Completed</Text>
-        <FlatList
-          data={completedTodos}
-          renderItem={renderItem}
-          keyExtractor={(todo) => todo.id.toString()}
-          contentContainerStyle={styles.listContainer}
-        />
+        {notCompletedTodos.length === 0 && completedTodos.length === 0 ? (
+          <View style={styles.emptyListContainer}>
+            <MaterialCommunityIcons
+              name="playlist-remove"
+              size={64}
+              color="#6B7280"
+            />
+            <Text style={styles.emptyListText}>Your todo list is empty!</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.sectionHeader}>Not Completed</Text>
+            <FlatList
+              data={notCompletedTodos}
+              renderItem={renderItem}
+              keyExtractor={(todo) => todo.id.toString()}
+              contentContainerStyle={styles.listContainer}
+            />
+            <Text style={styles.sectionHeader}>Completed</Text>
+            <FlatList
+              data={completedTodos}
+              renderItem={renderItem}
+              keyExtractor={(todo) => todo.id.toString()}
+              contentContainerStyle={styles.listContainer}
+            />
+          </>
+        )}
       </SafeAreaView>
     </LinearGradient>
   );
@@ -121,9 +194,22 @@ export default function Index() {
 
 const TodoItem = ({ item, toggleTodo, removeTodo }) => {
   if (!item.fadeAnim) item.fadeAnim = new Animated.Value(1);
+  if (!item.slideAnim) item.slideAnim = new Animated.Value(0);
+  if (!item.bounceAnim) item.bounceAnim = new Animated.Value(1);
 
   return (
-    <Animated.View style={[styles.todoItem, { opacity: item.fadeAnim }]}>
+    <Animated.View
+      style={[
+        styles.todoItem,
+        {
+          opacity: item.fadeAnim,
+          transform: [
+            { translateX: item.slideAnim },
+            { scale: item.bounceAnim || 1 },
+          ],
+        },
+      ]}
+    >
       <Pressable style={styles.todoTextContainer} onPress={() => toggleTodo(item.id)}>
         <Text
           style={[
@@ -135,13 +221,6 @@ const TodoItem = ({ item, toggleTodo, removeTodo }) => {
         </Text>
       </Pressable>
       <View style={styles.todoActions}>
-        <Text
-          style={
-            item.completed ? styles.completedLabel : styles.notCompletedLabel
-          }
-        >
-          {item.completed ? "Completed" : "Not Completed"}
-        </Text>
         <Pressable onPress={() => toggleTodo(item.id)} style={styles.toggleButton}>
           <Text style={styles.toggleButtonText}>
             {item.completed ? "Undo" : "Complete"}
@@ -207,15 +286,13 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   addButton: {
-    backgroundColor: "#3B82F6",
     borderRadius: 8,
+    overflow: "hidden",
+  },
+  addButtonGradient: {
     paddingVertical: 12,
     paddingHorizontal: 18,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    alignItems: "center",
   },
   addButtonText: {
     color: "#FFFFFF",
@@ -264,18 +341,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 8,
   },
-  completedLabel: {
-    fontSize: 14,
-    color: "#22C55E",
-    fontWeight: "bold",
-    marginRight: 8,
-  },
-  notCompletedLabel: {
-    fontSize: 14,
-    color: "#FACC15",
-    fontWeight: "bold",
-    marginRight: 8,
-  },
   toggleButton: {
     backgroundColor: "#3B82F6",
     borderRadius: 8,
@@ -294,5 +359,17 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     marginVertical: 10,
     paddingHorizontal: 16,
+  },
+  emptyListContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 50,
+  },
+  emptyListText: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 10,
   },
 });
