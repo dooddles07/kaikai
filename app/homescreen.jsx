@@ -14,8 +14,32 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { BlurView } from "expo-blur";
+import { useRouter } from "expo-router"; // Import useRouter
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function Index() {
+const saveTasks = async (type_id, tasks) => {
+  try {
+    await AsyncStorage.setItem(`tasks_${type_id}`, JSON.stringify(tasks));
+  } catch (error) {
+    console.error("Error saving tasks:", error);
+  }
+};
+
+const loadTasks = async (type_id) => {
+  try {
+    const storedTasks = await AsyncStorage.getItem(`tasks_${type_id}`);
+    return storedTasks ? JSON.parse(storedTasks) : [];
+  } catch (error) {
+    console.error("Error loading tasks:", error);
+    return [];
+  }
+};
+
+export default function HomeScreen({ userId, username }) {
+  const router = useRouter(); // Initialize the router
+
+  console.log("Username:", username); // Debugging: Check if username is passed
+
   const [todos, setTodos] = useState([]);
   const [text, setText] = useState("");
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -71,7 +95,12 @@ export default function Index() {
               useNativeDriver: true,
             }),
           ]).start();
-          return { ...todo, completed: !todo.completed, bounceAnim };
+          return {
+            ...todo,
+            completed: !todo.completed,
+            completedAt: !todo.completed ? new Date().toLocaleString() : null, // Set or clear the completedAt property
+            bounceAnim,
+          };
         }
         return todo;
       })
@@ -137,6 +166,10 @@ export default function Index() {
     }).start();
   };
 
+  const handleLogout = () => {
+    router.push("/"); // Navigate to the index screen
+  };
+
   const renderItem = useCallback(
     ({ item }) => (
       <TodoItem
@@ -155,6 +188,9 @@ export default function Index() {
   return (
     <LinearGradient colors={["#1E293B", "#0F172A"]} style={styles.container}>
       <SafeAreaView style={styles.safeContainer}>
+        {/* Display the username */}
+        <Text style={styles.usernameLabel}>Welcome, {username || "User"}!</Text>
+
         <BlurView intensity={50} tint="dark" style={styles.navbar}>
           <Text style={styles.navbarTitle}>TODO LIST</Text>
         </BlurView>
@@ -185,66 +221,40 @@ export default function Index() {
           </Animated.View>
         </View>
         {notCompletedTodos.length === 0 && completedTodos.length === 0 ? (
-          <View style={styles.emptyListContainer}>
-            <MaterialCommunityIcons
-              name="playlist-remove"
-              size={64}
-              color="#6B7280"
-            />
-            <Text style={styles.emptyListText}>Your todo list is empty!</Text>
-          </View>
+          <EmptyList />
         ) : (
           <>
-            <Text style={styles.sectionHeader}>Not Completed</Text>
-            <FlatList
-              data={notCompletedTodos}
-              renderItem={renderItem}
-              keyExtractor={(todo) => todo.id.toString()}
-              contentContainerStyle={styles.listContainer}
-            />
-            <Text style={styles.sectionHeader}>Completed</Text>
-            <FlatList
-              data={completedTodos}
-              renderItem={renderItem}
-              keyExtractor={(todo) => todo.id.toString()}
-              contentContainerStyle={styles.listContainer}
-            />
+            <Section title="Not Completed">
+              <FlatList
+                data={notCompletedTodos}
+                renderItem={renderItem}
+                keyExtractor={(todo) => todo.id.toString()}
+                contentContainerStyle={styles.listContainer}
+              />
+            </Section>
+            <Section title="Completed">
+              <FlatList
+                data={completedTodos}
+                renderItem={renderItem}
+                keyExtractor={(todo) => todo.id.toString()}
+                contentContainerStyle={styles.listContainer}
+              />
+            </Section>
           </>
         )}
 
-        {/* Edit Modal */}
-        <Modal
+        <EditModal
           visible={editModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setEditModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Edit Task</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Edit task title"
-                placeholderTextColor="#BBB"
-                value={editTodo?.title}
-                onChangeText={(text) =>
-                  setEditTodo((prev) => ({ ...prev, title: text }))
-                }
-              />
-              <View style={styles.modalActions}>
-                <Pressable
-                  style={styles.modalButton}
-                  onPress={() => setEditModalVisible(false)}
-                >
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable style={styles.modalButton} onPress={saveEditTodo}>
-                  <Text style={styles.modalButtonText}>Save</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
+          editTodo={editTodo}
+          setEditTodo={setEditTodo}
+          onClose={() => setEditModalVisible(false)}
+          onSave={saveEditTodo}
+        />
+
+        {/* Logout Button */}
+        <Pressable onPress={handleLogout} style={styles.logoutButton}>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </Pressable>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -268,32 +278,87 @@ const TodoItem = ({ item, toggleTodo, removeTodo, openEditModal }) => {
         },
       ]}
     >
-      <Pressable style={styles.todoTextContainer} onPress={() => toggleTodo(item.id)}>
+      <View style={styles.todoTextContainer}>
         <Text
           style={[
             styles.todoText,
-            item.completed ? styles.completedText : styles.notCompletedText,
+            item.completed ? styles.completedTextNoLine : styles.notCompletedText,
           ]}
         >
           {item.title}
         </Text>
-      </Pressable>
+      </View>
       <View style={styles.todoActions}>
-        <Pressable onPress={() => openEditModal(item)} style={styles.editButton}>
-          <MaterialCommunityIcons name="pencil" size={24} color="#3B82F6" />
-        </Pressable>
-        <Pressable onPress={() => toggleTodo(item.id)} style={styles.toggleButton}>
-          <Text style={styles.toggleButtonText}>
-            {item.completed ? "Undo" : "✔"}
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => removeTodo(item.id)}>
-          <MaterialCommunityIcons name="delete-circle" size={32} color="#FF5252" />
-        </Pressable>
+        {/* Render the Edit button only if the task is not completed */}
+        {!item.completed && (
+          <Pressable onPress={() => openEditModal(item)} style={styles.editButton}>
+            <MaterialCommunityIcons name="pencil" size={24} color="#3B82F6" />
+          </Pressable>
+        )}
+        {/* Render a static checkmark for completed tasks */}
+        {item.completed ? (
+          <MaterialCommunityIcons name="check-circle" size={32} color="#22C55E" />
+        ) : (
+          <Pressable onPress={() => toggleTodo(item.id)} style={styles.toggleButton}>
+            <Text style={styles.toggleButtonText}>✔</Text>
+          </Pressable>
+        )}
+        {/* Render the Delete button only if the task is not completed */}
+        {!item.completed && (
+          <Pressable onPress={() => removeTodo(item.id)}>
+            <MaterialCommunityIcons name="delete-circle" size={32} color="#FF5252" />
+          </Pressable>
+        )}
       </View>
     </Animated.View>
   );
 };
+
+const Section = ({ title, children }) => (
+  <>
+    <Text style={styles.sectionHeader}>{title}</Text>
+    {children}
+  </>
+);
+
+const EmptyList = () => (
+  <View style={styles.emptyListContainer}>
+    <MaterialCommunityIcons name="playlist-remove" size={64} color="#6B7280" />
+    <Text style={styles.emptyListText}>Your todo list is empty!</Text>
+  </View>
+);
+
+const EditModal = ({ visible, editTodo, setEditTodo, onClose, onSave }) => (
+  <Modal
+    visible={visible}
+    transparent
+    animationType="slide"
+    onRequestClose={onClose}
+  >
+    <View style={styles.modalContainer}>
+      <View style={styles.modalContent}>
+        <Text style={styles.modalTitle}>Edit Task</Text>
+        <TextInput
+          style={styles.editInput}
+          placeholder="Edit task title"
+          placeholderTextColor="#BBB"
+          value={editTodo?.title}
+          onChangeText={(text) =>
+            setEditTodo((prev) => ({ ...prev, title: text }))
+          }
+        />
+        <View style={styles.modalActions}>
+          <Pressable style={styles.modalButton} onPress={onClose}>
+            <Text style={styles.modalButtonText}>Cancel</Text>
+          </Pressable>
+          <Pressable style={styles.modalButton} onPress={onSave}>
+            <Text style={styles.modalButtonText}>Save</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -393,6 +458,9 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
     color: "#22C55E",
   },
+  completedTextNoLine: {
+    color: "#22C55E", // Green color for completed tasks
+  },
   notCompletedText: {
     color: "#FACC15",
   },
@@ -471,5 +539,46 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  editInput: {
+    width: "100%", // Make the input take the full width of the modal
+    borderColor: "transparent",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16, // Increase padding for better usability
+    fontSize: 18, // Increase font size for better readability
+    color: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.1)", // Match the modal's background
+    marginBottom: 16, // Add spacing below the input
+  },
+  disabledButton: {
+    opacity: 0, // Reduce opacity to indicate the button is disabled
+  },
+  logoutButton: {
+    position: "absolute",
+    bottom: 16, // Move to the bottom of the screen
+    right: 16, // Align to the right
+    backgroundColor: "#FF5252",
+    paddingVertical: 6, // Smaller padding
+    paddingHorizontal: 12, // Smaller padding
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  logoutButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12, // Smaller font size
+    fontWeight: "bold",
+    textTransform: "uppercase",
+  },
+  usernameLabel: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 8, // Add spacing below the username
   },
 });

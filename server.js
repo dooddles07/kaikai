@@ -5,20 +5,56 @@ const app = express();
 const PORT = 8081;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // Ensure JSON body parsing middleware is enabled
 
+// In-memory storage for registered users
+const users = [];
+let nextTypeId = 1; // Counter for generating type_id
+
+// Login Endpoint
 app.post("/api/login", (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required." });
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username and password are required." });
   }
 
-  if (email === "user@example.com" && password === "password") {
-    res.status(200).json({ message: "Login successful!" });
+  const user = users.find((user) => user.username === username && user.password === password);
+
+  if (user) {
+    res.status(200).json({ 
+      message: "Login successful!", 
+      username: user.username, 
+      type_id: user.type_id 
+    });
   } else {
-    res.status(401).json({ message: "Invalid email or password." });
+    res.status(401).json({ message: "Invalid username or password." });
   }
+});
+
+// Register Endpoint
+app.post("/api/register", (req, res) => {
+  const { fullname, username, password } = req.body;
+
+  // Validate input
+  if (!fullname || !username || !password) {
+    return res.status(400).json({ message: "All fields are required." });
+  }
+
+  // Check if the username already exists
+  const existingUser = users.find((user) => user.username === username);
+  if (existingUser) {
+    return res.status(409).json({ message: "Username already exists." });
+  }
+
+  // Auto-generate type_id and increment it
+  const type_id = nextTypeId++;
+  users.push({ fullname, username, password, type_id });
+
+  console.log("New User Registered:", { fullname, username, password, type_id });
+  console.log("Current Users:", users); // Log all users for debugging
+
+  res.status(201).json({ message: "User registered successfully!", type_id });
 });
 
 app.listen(PORT, () => {
