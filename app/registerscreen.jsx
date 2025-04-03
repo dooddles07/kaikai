@@ -24,7 +24,7 @@ export default function RegisterScreen() {
     }
 
     try {
-      const response = await fetch("http://192.168.100.134:8081/api/register", {
+      const response = await fetch("http://192.168.10.65:8081/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -38,18 +38,15 @@ export default function RegisterScreen() {
 
       const data = await response.json();
       console.log("API Response:", data); // Debugging: Log the API response
+      console.log("Response Status:", response.status);
+      console.log("Response OK:", response.ok);
 
       if (response.ok) {
-        Alert.alert("Success", "User registered successfully!", [
-          {
-            text: "OK",
-            onPress: () => {
-              console.log("Navigating to index..."); // Debugging: Log navigation
-              router.push("index"); // Navigate to the login screen
-            },
-          },
-        ]);
+        console.log("Registration successful, redirecting...");
+        Alert.alert("Success", "User registered successfully!");
+        router.push("/"); // Navigate to the login screen
       } else {
+        console.log("Registration failed:", data.message);
         Alert.alert("Error", data.message || "Registration failed.");
       }
     } catch (error) {

@@ -29,7 +29,7 @@ export default function Login() {
 
     setLoading(true); // Show loading state
     try {
-      const response = await fetch("http://192.168.100.134:8081/api/login", { // Replace with your IP address
+      const response = await fetch("http://192.168.10.65:8081/api/login", { // Replace with your IP address
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -141,7 +141,7 @@ export function RegisterScreen() {
     }
 
     try {
-      const response = await fetch("http://192.168.100.134:8081/api/register", {
+      const response = await fetch("http://192.168.10.65:8081/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
