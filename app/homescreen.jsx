@@ -189,7 +189,7 @@ export default function HomeScreen({ userId, username }) {
     <LinearGradient colors={["#1E293B", "#0F172A"]} style={styles.container}>
       <SafeAreaView style={styles.safeContainer}>
         {/* Display the username */}
-        <Text style={styles.usernameLabel}>Welcome, {username || "User"}!</Text>
+        <Text style={styles.usernameLabel}>Welcome, { username }!</Text>
 
         <BlurView intensity={50} tint="dark" style={styles.navbar}>
           <Text style={styles.navbarTitle}>TODO LIST</Text>

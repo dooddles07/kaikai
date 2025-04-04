@@ -28,7 +28,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.10.63:8081/api/login", {
+      const response = await fetch("https://devapi-618v.onrender.com/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -152,11 +152,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 12,
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.2)", // Replace shadow* properties with boxShadow
+    elevation: 5, // Keep elevation for Android compatibility
   },
   input: {
     backgroundColor: "rgba(255, 255, 255, 0.05)",

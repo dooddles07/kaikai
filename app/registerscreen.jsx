@@ -18,13 +18,15 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
 
   const handleRegister = async () => {
+    const typeId = "1"; // Default value for type_id
+
     if (!fullname.trim() || !username.trim() || !password.trim()) {
       Alert.alert("Error", "Please fill in all fields.");
       return;
     }
 
     try {
-      const response = await fetch("http://192.168.10.63:8081/api/register", {
+      const response = await fetch("https://devapi-618v.onrender.com/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -33,24 +35,21 @@ export default function RegisterScreen() {
           fullname: fullname.trim(),
           username: username.trim(),
           password: password.trim(),
+          type_id: typeId, // Include default type_id in the request
         }),
       });
 
       const data = await response.json();
-      console.log("API Response:", data); // Debugging: Log the API response
-      console.log("Response Status:", response.status);
-      console.log("Response OK:", response.ok);
+      console.log("API Response:", data);
 
       if (response.ok) {
-        console.log("Registration successful, redirecting...");
-        Alert.alert("Success", "User registered successfully!");
-        router.push("/"); // Navigate to the login screen
+        console.log("User registered successfully!");
+        router.push("/"); // Navigate directly to login screen
       } else {
-        console.log("Registration failed:", data.message);
         Alert.alert("Error", data.message || "Registration failed.");
       }
     } catch (error) {
-      console.error("Registration Error:", error); // Debugging: Log the error
+      console.error("Registration Error:", error);
       Alert.alert("Error", "Unable to connect to the server.");
     }
   };
@@ -94,10 +93,7 @@ export default function RegisterScreen() {
           Already have an account?{" "}
           <Text
             style={styles.footerLink}
-            onPress={() => {
-              console.log("Navigating to index..."); // Debugging: Log navigation
-              router.push("/"); // Navigate to the login screen
-            }}
+            onPress={() => router.push("/")} // Navigate to login screen
           >
             Login
           </Text>
