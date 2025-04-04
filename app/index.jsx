@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Alert,
   Animated,
-  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,11 +14,11 @@ import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 
 export default function Login() {
-  const router = useRouter(); // Initialize the router
-  const [username, setUsername] = useState(""); // Changed from email to username
+  const router = useRouter();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [buttonScale] = useState(new Animated.Value(1)); // Scale animation for the "Login" button
-  const [loading, setLoading] = useState(false); // Loading state for the login button
+  const [buttonScale] = useState(new Animated.Value(1));
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -27,31 +26,31 @@ export default function Login() {
       return;
     }
 
-    setLoading(true); // Show loading state
+    setLoading(true);
     try {
-      const response = await fetch("http://192.168.10.65:8081/api/login", { // Replace with your IP address
+      const response = await fetch("http://192.168.10.63:8081/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password }), // Changed email to username
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();
-      console.log("API Response:", data); // Debugging: Log the API response
+      console.log("API Response:", data);
 
       if (response.ok) {
         Alert.alert("Success", "Login successful!");
-        console.log("Navigating to homescreen..."); // Debugging: Log navigation
-        router.push("homescreen"); // Navigate to the home screen
+        console.log("Navigating to homescreen...");
+        router.push("homescreen");
       } else {
-        Alert.alert("Error", data.message || "Invalid username or password."); // Updated error message
+        Alert.alert("Error", data.message || "Invalid username or password.");
       }
     } catch (error) {
-      console.error("Login Error:", error); // Debugging: Log the error
+      console.error("Login Error:", error);
       Alert.alert("Error", "Unable to connect to the server.");
     } finally {
-      setLoading(false); // Hide loading state
+      setLoading(false);
     }
   };
 
@@ -76,15 +75,14 @@ export default function Login() {
       <SafeAreaView style={styles.safeContainer}>
         <BlurView intensity={50} tint="dark" style={styles.header}>
           <Text style={styles.headerTitle}>TODOS APPLICATION</Text>
-
         </BlurView>
         <View style={styles.formContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Username" // Changed placeholder from Email to Username
+            placeholder="Username"
             placeholderTextColor="#BBB"
-            value={username} // Changed from email to username
-            onChangeText={setUsername} // Changed from setEmail to setUsername
+            value={username}
+            onChangeText={setUsername}
             autoCapitalize="none"
           />
           <TextInput
@@ -101,7 +99,7 @@ export default function Login() {
               onPressOut={handleButtonPressOut}
               onPress={handleLogin}
               style={styles.loginButton}
-              disabled={loading} // Disable button while loading
+              disabled={loading}
             >
               <LinearGradient
                 colors={["#3B82F6", "#2563EB"]}
@@ -118,108 +116,12 @@ export default function Login() {
           Don't have an account?{" "}
           <Text
             style={styles.footerLink}
-            onPress={() => router.push("registerscreen")} // Navigate to the register screen
+            onPress={() => router.push("registerscreen")}
           >
             Sign Up
           </Text>
         </Text>
       </SafeAreaView>
-    </LinearGradient>
-  );
-}
-
-export function RegisterScreen() {
-  const router = useRouter();
-  const [fullname, setFullname] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleRegister = async () => {
-    if (!fullname.trim() || !username.trim() || !password.trim()) {
-      Alert.alert("Error", "Please fill in all fields.");
-      return;
-    }
-
-    try {
-      const response = await fetch("http://192.168.10.65:8081/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullname: fullname.trim(),
-          username: username.trim(),
-          password: password.trim(),
-        }),
-      });
-
-      const data = await response.json();
-      console.log("API Response:", data); // Debugging: Log the API response
-
-      if (response.ok) {
-        Alert.alert("Success", "User registered successfully!", [
-          {
-            text: "OK",
-            onPress: () => {
-              console.log("Navigating to index..."); // Debugging: Log navigation
-              router.push("index"); // Navigate to the login screen
-            },
-          },
-        ]);
-      } else {
-        Alert.alert("Error", data.message || "Registration failed.");
-      }
-    } catch (error) {
-      console.error("Registration Error:", error); // Debugging: Log the error
-      Alert.alert("Error", "Unable to connect to the server.");
-    }
-  };
-
-  return (
-    <LinearGradient colors={["#1E293B", "#0F172A"]} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.headerTitle}>Register</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
-          placeholderTextColor="#BBB"
-          value={fullname}
-          onChangeText={setFullname}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          placeholderTextColor="#BBB"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#BBB"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-        <Pressable onPress={handleRegister} style={styles.registerButton}>
-          <LinearGradient
-            colors={["#3B82F6", "#2563EB"]}
-            style={styles.registerButtonGradient}
-          >
-            <Text style={styles.registerButtonText}>Register</Text>
-          </LinearGradient>
-        </Pressable>
-        <Text style={styles.footerText}>
-          Already have an account?{" "}
-          <Text
-            style={styles.footerLink}
-            onPress={() => router.push("index")} // Navigate to the login screen
-          >
-            Login
-          </Text>
-        </Text>
-      </ScrollView>
     </LinearGradient>
   );
 }
@@ -245,11 +147,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFFFFF",
     letterSpacing: 1.5,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: "#9CA3AF",
-    marginTop: 8,
   },
   formContainer: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -293,26 +190,6 @@ const styles = StyleSheet.create({
   footerLink: {
     color: "#3B82F6",
     fontWeight: "bold",
-  },
-  scrollContainer: {
-    padding: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  registerButton: {
-    borderRadius: 8,
-    overflow: "hidden",
-    width: "100%",
-  },
-  registerButtonGradient: {
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  registerButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-    textTransform: "uppercase",
   },
 });
 
